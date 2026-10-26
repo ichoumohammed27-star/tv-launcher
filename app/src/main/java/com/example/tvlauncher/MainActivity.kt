@@ -11,9 +11,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 
-class MainActivity : AppCompatActivity() {
-    private lateinit var adapter: AppAdapter
+data class AppInfo(
+    val name: String,
+    val packageName: String,
+    val icon: Drawable
+)
 
+class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
@@ -22,34 +26,33 @@ class MainActivity : AppCompatActivity() {
         rv.layoutManager = GridLayoutManager(this, 5)
 
         val apps = getInstalledApps()
-        adapter = AppAdapter(apps) { pkg ->
-            val intent = packageManager.getLaunchIntentForPackage(pkg)
-            if (intent != null) {
-                startActivity(intent)
+        val adapter = AppAdapter(apps) { pkg ->
+            val launchIntent = packageManager.getLaunchIntentForPackage(pkg)
+            if (launchIntent != null) {
+                startActivity(launchIntent)
             }
         }
         rv.adapter = adapter
     }
 
     private fun getInstalledApps(): List<AppInfo> {
-        val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+        val intent = Intent(Intent.ACTION_MAIN, null).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+        }
         return packageManager.queryIntentActivities(intent, 0).mapNotNull { resolveInfo ->
             val pkg = resolveInfo.activityInfo.packageName
-            if (pkg == packageName) null
-            else AppInfo(
-                resolveInfo.loadLabel(packageManager).toString(),
-                pkg,
-                resolveInfo.loadIcon(packageManager)
-            )
+            if (pkg == packageName) {
+                null
+            } else {
+                AppInfo(
+                    resolveInfo.loadLabel(packageManager).toString(),
+                    pkg,
+                    resolveInfo.loadIcon(packageManager)
+                )
+            }
         }
     }
 }
-
-data class AppInfo(
-    val name: String,
-    val packageName: String,
-    val icon: Drawable
-)
 
 class AppAdapter(
     private val apps: List<AppInfo>,
@@ -76,10 +79,10 @@ class AppAdapter(
             v.elevation = if (hasFocus) 16f else 4f
         }
 
-        holder.itemView.setOnClickListener { 
-            onClick(app.packageName) 
+        holder.itemView.setOnClickListener {
+            onClick(app.packageName)
         }
     }
 
-    override fun getItemCount() = apps.size
+    override fun getItemCount(): Int = apps.size
 }
